@@ -2,7 +2,7 @@
 
 A modern implementation of the classic Flappy Bird game built with React, TypeScript, and Tailwind CSS. This version features a beautiful UI, sound effects, high scores, and a leaderboard system powered by Supabase.
 
-![Game Screenshot](https://mbgoekwzincaggzfkxft.supabase.co/storage/v1/object/public/Images/AdventureBuildr%20Flappy%20Bird.jpg)
+![Game Screenshot](https://mbgoekwzincaggzfkxft.supabase.co/storage/v1/object/public/game-assets/flappy-bird-screenshot.png)
 
 ## Features
 

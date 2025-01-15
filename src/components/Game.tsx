@@ -50,7 +50,6 @@ export function Game() {
   const [highScores, setHighScores] = useState<HighScore[]>([]);
   const [isLoadingScores, setIsLoadingScores] = useState(true);
   const [scoreSubmitted, setScoreSubmitted] = useState(false);
-  const [canSaveScore, setCanSaveScore] = useState(false);
   
   // Bird state
   const [birdPosition, setBirdPosition] = useState(300);
@@ -96,14 +95,16 @@ export function Game() {
   // Save high score
   const saveHighScore = useCallback(async (score: number) => {
     if (!username) return;
-    if (scoreSubmitted) return;
     
     const { data: scores } = await supabase
       .from('high_scores')
       .select('score')
       .order('score', { ascending: false });
 
-    if (!scores) return;
+    if (!scores) {
+      console.error('Failed to fetch scores');
+      return;
+    }
 
     // If we have 3 scores, check if the new score is higher than any existing score
     if (scores.length >= 3 && score <= Math.min(...scores.map(s => s.score))) {
@@ -178,7 +179,6 @@ export function Game() {
     setGameOver(false);
     setGameStarted(false);
     setScoreSubmitted(false);
-    setCanSaveScore(false);
     if (gameLoopRef.current) {
       cancelAnimationFrame(gameLoopRef.current);
     }
@@ -255,25 +255,6 @@ export function Game() {
   // Main game loop - handles all game updates
   const gameLoop = useCallback(() => {
     if (!gameStarted || gameOver) return;
-    if (gameOver) {
-      // Check if score is high enough to save when game ends
-      const checkHighScore = async () => {
-        const { data: scores } = await supabase
-          .from('high_scores')
-          .select('score')
-          .order('score', { ascending: false });
-
-        if (!scores) return;
-
-        // Can save if we have less than 3 scores or the new score is higher than the lowest
-        setCanSaveScore(
-          scores.length < 3 || score > Math.min(...scores.map(s => s.score))
-        );
-      };
-
-      checkHighScore();
-      return;
-    }
 
     // Track frame count for initial pipe spawn delay
     frameCountRef.current += 1;
@@ -440,7 +421,7 @@ export function Game() {
           <h2 className="text-3xl font-bold mb-4">Game Over!</h2>
           <p className="text-lg mb-2">Score: {score}</p>
           <p className="text-lg mb-4">High Score: {highScore}</p>
-          {score > 0 && !scoreSubmitted && canSaveScore && (
+          {score > 0 && !scoreSubmitted && (
             <div className="mb-4">
               <input
                 type="text"
@@ -461,11 +442,6 @@ export function Game() {
                 Save Score
               </button>
             </div>
-          )}
-          {score > 0 && !canSaveScore && (
-            <p className="text-gray-600 mb-4">
-              Score not high enough for the leaderboard
-            </p>
           )}
           <button
             className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
