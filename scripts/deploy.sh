@@ -22,10 +22,12 @@ if [ -f "$SECRETS_FILE" ]; then
 fi
 
 # hetzner-sites is the box every other arcade game already deploys to
-# (docs/INVENTORY.md in the arcade repo, "Live on the games box"). Override
-# either var if the lead's vhost ends up somewhere else.
+# (docs/INVENTORY.md in the arcade repo, "Live on the games box"). It's a
+# CloudPanel box, so the webroot is /home/<site-user>/htdocs/<domain>, not
+# /var/www/<domain> — confirmed live at https://flappy-bird.adventurebuildr.com
+# (arcade#42). Override either var if that ever changes.
 REMOTE_HOST="${FLAPPY_BIRD_DEPLOY_HOST:-hetzner-sites}"
-REMOTE_PATH="${FLAPPY_BIRD_DEPLOY_PATH:-/var/www/flappy-bird.adventurebuildr.com}"
+REMOTE_PATH="${FLAPPY_BIRD_DEPLOY_PATH:-/home/flappybird/htdocs/flappy-bird.adventurebuildr.com}"
 
 # Overridable so a test can point this at a directory that doesn't exist
 # without touching the real dist/.

@@ -59,17 +59,14 @@ Reads `$HOME/.config/dev-secrets/arcade/secrets.env` if present (same canonical 
 repo's own `scripts/deploy.sh` uses), then rsyncs to:
 
 - `FLAPPY_BIRD_DEPLOY_HOST` (default `hetzner-sites`, the same box every other arcade game is on)
-- `FLAPPY_BIRD_DEPLOY_PATH` (default `/var/www/flappy-bird.adventurebuildr.com`, matching the
-  `flappy-bird.adventurebuildr.com` target arcade#41 names)
+- `FLAPPY_BIRD_DEPLOY_PATH` (default `/home/flappybird/htdocs/flappy-bird.adventurebuildr.com`
+  — CloudPanel's `/home/<site-user>/htdocs/<domain>` webroot layout, not `/var/www/<domain>`)
 
-**This dev has no ssh access and has not run this script.** The default path is a guess that
-follows the existing `<slug>.adventurebuildr.com` nginx pattern (arcade's
-`docs/INVENTORY.md`) — confirm or override it to match whatever webroot the vhost actually uses
-before running.
+**The box side is done.** The site is live at https://flappy-bird.adventurebuildr.com (arcade#42)
+and the path above is confirmed, not a guess — this dev still has no ssh access and doesn't run
+this script itself; the arcade lead does.
 
-## Known cosmetic issues (not fixed — out of this task's scope)
+## Known cosmetic issues
 
-- `dist/index.html` still has the Vite/React boilerplate `<title>Vite + React + TS</title>`.
-- It references `/vite.svg`, which 404s — no `public/` dir exists in this repo to supply it.
-
-Neither blocks the build or the deploy; noting them for whoever picks up the game-polish side.
+- `dist/index.html` referenced `/vite.svg`, which 404s — no `public/` dir exists in this repo to
+  supply it. Not fixed; doesn't block the build or the deploy.
