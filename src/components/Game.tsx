@@ -4,9 +4,9 @@ import { Pipe } from './Pipe';
 import { Leaderboard } from './Leaderboard';
 import { Trophy, Volume2, VolumeX } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import flapSound from '../../sounds/flap-101soundboards.mp3';
-import pointSound from '../../sounds/point-101soundboards.mp3';
-import dieSound from '../../sounds/die-101soundboards.mp3';
+import flapSound from '../../sounds/flap.mp3';
+import pointSound from '../../sounds/point.mp3';
+import dieSound from '../../sounds/die.mp3';
 import type { Database } from '../lib/database.types';
 
 // Logo URL - Replace with your hosted logo URL
