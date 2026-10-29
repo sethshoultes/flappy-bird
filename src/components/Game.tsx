@@ -83,6 +83,10 @@ export function Game() {
   // Load high scores
   useEffect(() => {
     async function loadHighScores() {
+      if (!supabase) {
+        setIsLoadingScores(false);
+        return;
+      }
       const { data } = await supabase
         .from('high_scores')
         .select('*')
@@ -98,7 +102,7 @@ export function Game() {
 
   // Save high score
   const saveHighScore = useCallback(async (score: number) => {
-    if (!username) return;
+    if (!username || !supabase) return;
     
     const { data: scores } = await supabase
       .from('high_scores')
