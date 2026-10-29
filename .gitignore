@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local environment (the leaderboard keys); see .env.example
+.env

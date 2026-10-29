@@ -4,6 +4,9 @@ import { Pipe } from './Pipe';
 import { Leaderboard } from './Leaderboard';
 import { Trophy, Volume2, VolumeX } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import flapSound from '../../sounds/flap.mp3';
+import pointSound from '../../sounds/point.mp3';
+import dieSound from '../../sounds/die.mp3';
 import type { Database } from '../lib/database.types';
 
 // Logo URL - Replace with your hosted logo URL
@@ -27,11 +30,12 @@ const HIGH_SCORE_KEY = 'flappyBirdHighScore';
 
 type HighScore = Database['public']['Tables']['high_scores']['Row'];
 
-// Sound effects URLs - Using short, lightweight MP3s
+// Sound effects, bundled with the app (they used to load from a Supabase Storage project that no
+// longer resolves, arcade#65)
 const SOUNDS = {
-  jump: 'https://mbgoekwzincaggzfkxft.supabase.co/storage/v1/object/public/Sound%20Effects%20Library/flap-101soundboards.mp3',
-  score: 'https://mbgoekwzincaggzfkxft.supabase.co/storage/v1/object/public/Sound%20Effects%20Library/point-101soundboards.mp3',
-  gameOver: 'https://mbgoekwzincaggzfkxft.supabase.co/storage/v1/object/public/Sound%20Effects%20Library/die-101soundboards.mp3'
+  jump: flapSound,
+  score: pointSound,
+  gameOver: dieSound,
 };
 
 // Type definition for pipe objects
@@ -79,6 +83,10 @@ export function Game() {
   // Load high scores
   useEffect(() => {
     async function loadHighScores() {
+      if (!supabase) {
+        setIsLoadingScores(false);
+        return;
+      }
       const { data } = await supabase
         .from('high_scores')
         .select('*')
@@ -94,7 +102,7 @@ export function Game() {
 
   // Save high score
   const saveHighScore = useCallback(async (score: number) => {
-    if (!username) return;
+    if (!username || !supabase) return;
     
     const { data: scores } = await supabase
       .from('high_scores')
