@@ -1,8 +1,7 @@
 # Flappy Bird Game
 
-A modern implementation of the classic Flappy Bird game built with React, TypeScript, and Tailwind CSS. This version features a beautiful UI, sound effects, high scores, and a leaderboard system powered by Supabase.
+A modern implementation of the classic Flappy Bird game built with React, TypeScript, and Tailwind CSS. This version features a beautiful UI, sound effects, high scores, and a leaderboard on the shared Arcade service (arcade.adventurebuildr.com).
 
-![Game Screenshot](https://mbgoekwzincaggzfkxft.supabase.co/storage/v1/object/public/game-assets/flappy-bird-screenshot.png)
 
 ## Features
 
@@ -59,7 +58,6 @@ npm run dev
 - React 18
 - TypeScript
 - Tailwind CSS
-- Supabase (Backend & Database)
 - Vite (Build Tool)
 
 ### Game Physics
@@ -74,7 +72,7 @@ The game uses custom physics calculations for:
 
 - **Components**: Modular React components for game elements
 - **State Management**: React hooks for game state
-- **Database**: Supabase for leaderboard functionality
+- **Leaderboard**: the Arcade service, one board (`pipes`), through `src/arcade.ts`; the old Supabase backend was removed
 - **Animations**: CSS animations for smooth visual effects
 - **Sound System**: Browser Audio API for sound effects
 

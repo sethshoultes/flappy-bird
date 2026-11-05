@@ -2,7 +2,7 @@
 # Ships dist/ to the flappy-bird.adventurebuildr.com box.
 # Run `npm run build` first — this script only deploys, it doesn't build.
 #
-# This is a static SPA (Vite + React, client-side Supabase leaderboard) — no
+# This is a static SPA (Vite + React, leaderboard on the Arcade service) — no
 # node process to run on the box, just files under a webroot nginx serves.
 #
 # arcade#42: this dev has no ssh access and does not run this script — the
