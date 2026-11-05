@@ -1,16 +1,21 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import { Trophy } from 'lucide-react';
-import type { Database } from '../lib/database.types';
+import { browserEnv, leaderboard, type Board } from '../arcade';
 
-type HighScore = Database['public']['Tables']['high_scores']['Row'];
+export function Leaderboard() {
+  const [board, setBoard] = useState<Board | undefined>();
 
-interface LeaderboardProps {
-  scores: HighScore[];
-  isLoading: boolean;
-}
+  useEffect(() => {
+    let live = true;
+    void leaderboard(browserEnv(), 'pipes', 'all').then((b) => {
+      if (live) setBoard(b);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
-export function Leaderboard({ scores, isLoading }: LeaderboardProps) {
-  if (isLoading) {
+  if (!board) {
     return (
       <div className="text-center p-4">
         <p className="text-white">Loading high scores...</p>
@@ -25,21 +30,18 @@ export function Leaderboard({ scores, isLoading }: LeaderboardProps) {
         <h2 className="text-2xl font-bold">Top Scores</h2>
       </div>
       <div className="space-y-2">
-        {scores.map((score, index) => (
-          <div
-            key={score.id}
-            className="flex items-center justify-between p-2 rounded bg-white/50"
-          >
-            <div className="flex items-center gap-3">
-              <span className="font-bold text-gray-600">#{index + 1}</span>
-              <span className="font-medium">{score.username}</span>
+        {board.ok &&
+          board.entries.slice(0, 10).map((e) => (
+            <div key={e.rank} className="flex items-center justify-between p-2 rounded bg-white/50">
+              <div className="flex items-center gap-3">
+                <span className="font-bold text-gray-600">#{e.rank}</span>
+                <span className="font-medium">{e.name}</span>
+              </div>
+              <span className="font-bold text-blue-600">{e.score}</span>
             </div>
-            <span className="font-bold text-blue-600">{score.score}</span>
-          </div>
-        ))}
-        {scores.length === 0 && (
-          <p className="text-center text-gray-500">No high scores yet!</p>
-        )}
+          ))}
+        {board.ok && board.entries.length === 0 && <p className="text-center text-gray-500">No scores yet</p>}
+        {!board.ok && <p className="text-center text-gray-500">The leaderboard is unavailable right now</p>}
       </div>
     </div>
   );

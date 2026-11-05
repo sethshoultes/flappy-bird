@@ -19,33 +19,14 @@ cleanly on 2026-09-21 from a fresh clone, despite no push since 2025-01-15.
 This is a pure client-side SPA — **no node process, no server-side rendering, nothing to run on
 the box.** Static files under a webroot, served by nginx, is the whole target.
 
-At runtime in the browser it talks to one external Supabase project (`mbgoekwzincaggzfkxft`) for:
-- the leaderboard (via `@supabase/supabase-js`, see below)
-- sound effects and the README's screenshot, which are hardcoded public Supabase Storage URLs in
-  `src/components/Game.tsx` — nothing the box needs to serve or proxy.
+At runtime in the browser it talks to one external service, the Arcade at
+`https://arcade.adventurebuildr.com`, for the leaderboard (`src/arcade.ts`): who the player is, the
+events of a run, and the top 10 of the `pipes` board. Sounds are bundled in `sounds/`.
 
-## Required build-time env vars
+## Build-time env vars
 
-The leaderboard client (`src/lib/supabase.ts`) reads two `import.meta.env.VITE_*` vars, inlined
-by Vite at build time:
-
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-
-**The build succeeds today with neither var set** — `createClient()` doesn't validate its
-arguments at call time, so an unset/undefined URL and key only fail in the browser console at
-runtime (leaderboard reads/writes will error; the game itself is unaffected). Set both before
-building for a working leaderboard. Values are not this dev's to look for — arcade#42's own
-instructions say the lead sources them from `~/.config/dev-secrets/arcade/secrets.env`.
-
-```bash
-VITE_SUPABASE_URL="…" VITE_SUPABASE_ANON_KEY="…" npm run build
-```
-
-**Security note, not this task's to fix**: this repo's `.env` is tracked in git (not
-`.gitignore`'d) and is public. Whatever key is in there is already exposed; if it's live, it
-should be rotated and untracked — flagging for the lead rather than touching a security-relevant
-file outside this task's scope.
+None. The build needs no settings, and the game plays with the Arcade unreachable: the leaderboard
+then says it is unavailable and the local high score still works.
 
 ## Deploy script
 

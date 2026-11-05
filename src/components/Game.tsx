@@ -3,11 +3,10 @@ import { Bird } from './Bird';
 import { Pipe } from './Pipe';
 import { Leaderboard } from './Leaderboard';
 import { Trophy, Volume2, VolumeX } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { browserEnv, claimHandle, getMe, startMatch, validHandle, type Match } from '../arcade';
 import flapSound from '../../sounds/flap.mp3';
 import pointSound from '../../sounds/point.mp3';
 import dieSound from '../../sounds/die.mp3';
-import type { Database } from '../lib/database.types';
 
 // Logo URL - Replace with your hosted logo URL
 const LOGO_URL = 'https://adventurebuildrstorage.storage.googleapis.com/wp-content/uploads/2024/10/11185818/AdventureBuildr-Logo-e1731351627826.png';
@@ -28,9 +27,7 @@ const GAP_SIZE = 250;
 // Local storage key for persisting high score
 const HIGH_SCORE_KEY = 'flappyBirdHighScore';
 
-type HighScore = Database['public']['Tables']['high_scores']['Row'];
-
-// Sound effects, bundled with the app (they used to load from a Supabase Storage project that no
+// Sound effects, bundled with the app (they used to load from a remote storage project that no
 // longer resolves, arcade#65)
 const SOUNDS = {
   jump: flapSound,
@@ -51,9 +48,8 @@ export function Game() {
   const [gameOver, setGameOver] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [username, setUsername] = useState('');
-  const [highScores, setHighScores] = useState<HighScore[]>([]);
-  const [isLoadingScores, setIsLoadingScores] = useState(true);
-  const [scoreSubmitted, setScoreSubmitted] = useState(false);
+  const [needsName, setNeedsName] = useState(false);
+  const [nameError, setNameError] = useState('');
   
   // Bird state
   const [birdPosition, setBirdPosition] = useState(300);
@@ -80,85 +76,52 @@ export function Game() {
   const scoreSoundRef = useRef<HTMLAudioElement | null>(null);
   const gameOverSoundRef = useRef<HTMLAudioElement | null>(null);
 
-  // Load high scores
-  useEffect(() => {
-    async function loadHighScores() {
-      if (!supabase) {
-        setIsLoadingScores(false);
-        return;
-      }
-      const { data } = await supabase
-        .from('high_scores')
-        .select('*')
-        .order('score', { ascending: false })
-        .limit(3);
-      
-      setHighScores(data || []);
-      setIsLoadingScores(false);
-    }
+  // The Arcade match of this run: started with the run, finished (with the score) at game over
+  const env = useRef(browserEnv()).current;
+  const matchRef = useRef<Match | null>(null);
+  const runStartRef = useRef(0);
+  const reportRef = useRef<{ duration_ms: number; score: number } | null>(null);
 
-    loadHighScores();
+  const sendRun = useCallback(() => {
+    const report = reportRef.current;
+    const match = matchRef.current;
+    if (!report || !match) return;
+    reportRef.current = null;
+    matchRef.current = null;
+    void match.finish({
+      result: 'loss',
+      duration_ms: report.duration_ms,
+      scores: report.score > 0 ? [{ board: 'pipes', value: Math.min(report.score, 1000) }] : [],
+    });
   }, []);
 
-  // Save high score
-  const saveHighScore = useCallback(async (score: number) => {
-    if (!username || !supabase) return;
-    
-    const { data: scores } = await supabase
-      .from('high_scores')
-      .select('score')
-      .order('score', { ascending: false });
+  // At game over: a player who already has a name is sent straight away, otherwise ask once for a name
+  useEffect(() => {
+    if (!gameOver) return;
+    reportRef.current = { duration_ms: Date.now() - runStartRef.current, score };
+    let live = true;
+    void getMe(env).then((me) => {
+      if (!live) return;
+      if (me.kind === 'none' && score > 0) setNeedsName(true);
+      else sendRun();
+    });
+    return () => {
+      live = false;
+    };
+    // score is final once gameOver is true
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameOver]);
 
-    if (!scores) {
-      console.error('Failed to fetch scores');
+  const saveName = useCallback(async () => {
+    const r = await claimHandle(env, username);
+    if (!r.ok) {
+      setNameError(r.error);
       return;
     }
-
-    // If we have 3 scores, check if the new score is higher than any existing score
-    if (scores.length >= 3 && score <= Math.min(...scores.map(s => s.score))) {
-      alert('Sorry, your score isn\'t high enough for the leaderboard!');
-      return;
-    }
-
-    try {
-      const { error } = await supabase.auth.signUp({
-        email: `${Date.now()}@temp.com`,
-        password: 'temporary-password',
-      });
-
-      if (error) throw error;
-
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return;
-
-      // Delete the lowest score if we already have 3 scores
-      if (scores.length >= 3) {
-        const lowestScore = Math.min(...scores.map(s => s.score));
-        await supabase.from('high_scores')
-          .delete()
-          .eq('score', lowestScore);
-      }
-
-      await supabase.from('high_scores').insert({
-        user_id: user.user.id,
-        score,
-        username,
-      });
-
-      setScoreSubmitted(true);
-
-      // Reload high scores
-      const { data: newScores } = await supabase
-        .from('high_scores')
-        .select('*')
-        .order('score', { ascending: false })
-        .limit(3);
-
-      setHighScores(newScores || []);
-    } catch (error) {
-      console.error('Error saving high score:', error);
-    }
-  }, [username, scoreSubmitted]);
+    setNeedsName(false);
+    setNameError('');
+    sendRun();
+  }, [env, username, sendRun]);
 
   // Initialize audio elements
   useEffect(() => {
@@ -186,23 +149,33 @@ export function Game() {
     setScore(0);
     setGameOver(false);
     setGameStarted(false);
-    setScoreSubmitted(false);
+    setNeedsName(false);
+    setNameError('');
+    if (needsName) {
+      // they skipped the name step: this run is not sent
+      reportRef.current = null;
+      matchRef.current = null;
+    } else {
+      sendRun();
+    }
     if (gameLoopRef.current) {
       cancelAnimationFrame(gameLoopRef.current);
     }
-  }, []);
+  }, [needsName, sendRun]);
 
   // Handle bird jump action
   const jump = useCallback(() => {
     if (!gameStarted) {
       setGameStarted(true);
+      runStartRef.current = Date.now();
+      matchRef.current = startMatch(env, 'human-vs-ai');
     }
     if (!gameOver) {
       playSound(jumpSoundRef.current);
       setBirdVelocity(JUMP_FORCE);
       setBirdRotation(-30);
     }
-  }, [gameOver, gameStarted, playSound]);
+  }, [env, gameOver, gameStarted, playSound]);
 
   // Generate new pipe with random height
   const spawnPipe = useCallback(() => {
@@ -429,11 +402,11 @@ export function Game() {
           <h2 className="text-3xl font-bold mb-4">Game Over!</h2>
           <p className="text-lg mb-2">Score: {score}</p>
           <p className="text-lg mb-4">High Score: {highScore}</p>
-          {score > 0 && !scoreSubmitted && (
+          {needsName && (
             <div className="mb-4">
               <input
                 type="text"
-                placeholder="Enter your name"
+                placeholder="Pick a name (3-12 letters, digits, _ or -)"
                 className="w-full px-4 py-2 border rounded-lg mb-2"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -443,12 +416,13 @@ export function Game() {
                 className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors w-full mb-4"
                 onClick={(e) => {
                   e.stopPropagation();
-                  saveHighScore(score);
+                  void saveName();
                 }}
-                disabled={!username}
+                disabled={!validHandle(username)}
               >
                 Save Score
               </button>
+              {nameError && <p className="text-red-600 text-sm mb-2">{nameError}</p>}
             </div>
           )}
           <button
@@ -466,7 +440,7 @@ export function Game() {
       {/* Leaderboard */}
       {!gameStarted && (
         <div className="absolute bottom-32 left-1/2 -translate-x-1/2">
-          <Leaderboard scores={highScores} isLoading={isLoadingScores} />
+          <Leaderboard />
         </div>
       )}
     </div>
